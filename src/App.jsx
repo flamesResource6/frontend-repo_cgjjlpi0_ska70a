@@ -8,6 +8,7 @@ function App() {
     contact_number: '',
     team_name: '',
     players: Array(8).fill(''),
+    fees: ''
   })
 
   const [submitting, setSubmitting] = useState(false)
@@ -62,25 +63,43 @@ function App() {
       return
     }
 
+    const feesNumber = parseFloat(form.fees)
+    if (isNaN(feesNumber) || feesNumber < 0) {
+      setError('Please enter a valid non-negative fees amount.')
+      setSubmitting(false)
+      return
+    }
+
     try {
       const res = await fetch(`${baseUrl}/api/registrations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          captain_name: form.captain_name,
+          contact_number: form.contact_number,
+          team_name: form.team_name,
+          players: form.players,
+          fees: feesNumber,
+        }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.detail || 'Submission failed')
       }
-      const data = await res.json()
+      await res.json()
       setMessage('Registration submitted successfully!')
-      setForm({ captain_name: '', contact_number: '', team_name: '', players: Array(8).fill('') })
+      setForm({ captain_name: '', contact_number: '', team_name: '', players: Array(8).fill(''), fees: '' })
       fetchRegistrations()
     } catch (e) {
       setError(e.message)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const formatCurrency = (val) => {
+    if (typeof val !== 'number') return ''
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(val)
   }
 
   return (
@@ -127,6 +146,23 @@ function App() {
                 placeholder="e.g., Thunder Strikers"
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Registration Fees</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.fees}
+                  onChange={(e) => updateField('fees', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  placeholder="e.g., 25.00"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -176,7 +212,12 @@ function App() {
                         <p className="font-semibold text-gray-800">{r.team_name}</p>
                         <p className="text-sm text-gray-600">Captain: {r.captain_name}</p>
                       </div>
-                      <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded">8 Players</span>
+                      <div className="text-right">
+                        <span className="block text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded">8 Players</span>
+                        {typeof r.fees !== 'undefined' && (
+                          <span className="block text-xs text-gray-600 mt-1">Fees: {formatCurrency(r.fees)}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-2 text-sm text-gray-700">
                       <p className="font-medium">Players:</p>
